@@ -1,0 +1,1885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRISM — Predictive Rail Intermodal Share Modeler</title>
+<!-- Load Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Load Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<!-- Google Fonts: Inter & JetBrains Mono -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-main: #0a0a0c;
+    --bg-card: #121318;
+    --border-card: #222530;
+    --text-main: #f3f4f6;
+    --text-muted: #9ca3af;
+    --c-transit: #2563eb;
+    --c-gate: #eab308;     /* Vibrant Yellow */
+    --c-yard: #ef4444;     /* Vibrant Red */
+    --c-rake: #15803d;     /* Rich Darker Green */
+    --c-amber: #f59e0b;
+    --c-blue: #3b82f6;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    height: 100vh;
+    max-height: 850px;
+    width: 100vw;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 8px 12px;
+    gap: 8px;
+    user-select: none;
+  }
+
+  /* 1. TOP EXECUTIVE HEADER BAR */
+  .exec-header {
+    height: 42px;
+    flex-shrink: 0;
+    background: linear-gradient(90deg, #12141c 0%, #161924 50%, #12141c 100%);
+    border: 1px solid #262a38;
+    border-radius: 8px;
+    padding: 0 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  }
+
+  .brand-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .prism-badge {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(37, 99, 235, 0.35));
+    border: 1px solid rgba(56, 189, 248, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.28);
+  }
+
+  .brand-titles {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .brand-main {
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    background: linear-gradient(90deg, #ffffff, #93c5fd);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .brand-sub {
+    font-size: 10.5px;
+    font-weight: 500;
+    color: #94a3b8;
+    border-left: 1px solid #2e3446;
+    padding-left: 10px;
+  }
+
+  /* High-Visibility Gold Attribution Badge */
+  .author-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    background: rgba(245, 158, 11, 0.14);
+    border: 1.5px solid #f59e0b;
+    padding: 4px 14px;
+    border-radius: 999px;
+    box-shadow: 0 0 14px rgba(245, 158, 11, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
+
+  .accent-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #fbbf24;
+    box-shadow: 0 0 8px #fbbf24;
+  }
+
+  .author-text {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #fbbf24;
+    letter-spacing: 0.35px;
+    text-shadow: 0 1px 6px rgba(245, 158, 11, 0.35);
+  }
+
+  /* 2. ROW 1: Top KPIs (~10% height) */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    height: 66px;
+    flex-shrink: 0;
+  }
+
+  .kpi-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-radius: 8px;
+    padding: 6px 11px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .kpi-title {
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .kpi-value-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+
+  .kpi-val {
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .kpi-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.06);
+    font-family: 'JetBrains Mono', monospace;
+    white-space: nowrap;
+  }
+
+  /* Editable Alpha Input inside KPI Card 4 */
+  .alpha-input {
+    background: #0d0f14;
+    border: 1px solid #f87171;
+    color: #f87171;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 800;
+    font-size: 15px;
+    padding: 1px 5px;
+    border-radius: 5px;
+    width: 66px;
+    text-align: right;
+  }
+
+  .alpha-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.35);
+  }
+
+  /* 3. ROW 2: Middle Section (3 equal columns, ~43% height) */
+  .mid-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    flex: 1.02;
+    min-height: 0;
+  }
+
+  /* 4. ROW 3: Bottom Section (3 equal columns, ~47% height) */
+  .bot-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    flex: 1.12;
+    min-height: 0;
+  }
+
+  .panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-radius: 8px;
+    padding: 8px 11px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+    flex-shrink: 0;
+  }
+
+  .panel-title {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.55px;
+    color: #cbd5e1;
+  }
+
+  .tag-badge {
+    font-size: 9.5px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-muted);
+    background: #1a1c23;
+    border: 1px solid #2d313e;
+    padding: 1.5px 6px;
+    border-radius: 4px;
+  }
+
+  /* Full-Height Chart Wrapper */
+  .chart-wrap {
+    flex: 1 1 auto;
+    position: relative;
+    min-height: 0;
+    height: 100%;
+    width: 100%;
+  }
+
+  .chart-wrap canvas {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  /* Custom Legend */
+  .legend-row {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 4px;
+    flex-shrink: 0;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    color: #d1d5db;
+    font-weight: 500;
+  }
+
+  .dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  /* Terminal Efficiency Knobs & Syringe Sliders */
+  .knobs-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex: 1;
+    gap: 5px;
+    min-height: 0;
+  }
+
+  .knob-box {
+    background: #171920;
+    border: 1px solid #262936;
+    border-radius: 6px;
+    padding: 5px 9px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    flex: 1;
+  }
+
+  .knob-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .knob-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .knob-drop-wrap {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+  }
+
+  .base-hr-input {
+    background: #0d0f14;
+    border: 1px solid #374151;
+    color: #f3f4f6;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 10.5px;
+    padding: 1px 4px;
+    border-radius: 4px;
+    width: 48px;
+    text-align: right;
+  }
+
+  .base-hr-input:focus {
+    outline: none;
+    border-color: var(--c-blue);
+  }
+
+  .knob-slider-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mult-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    width: 36px;
+    text-align: right;
+    font-weight: 700;
+  }
+
+  /* Strict Syringe Slider Styling — ZERO White Tracks, ZERO Blue */
+  input[type=range].syringe-slider {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    width: 100%;
+    height: 10px;
+    border-radius: 999px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type=range].syringe-slider::-webkit-slider-runnable-track {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    background: transparent !important;
+    border: none !important;
+    height: 10px;
+  }
+
+  input[type=range].syringe-slider::-moz-range-track {
+    background: transparent !important;
+    border: none !important;
+    height: 10px;
+  }
+
+  input[type=range].syringe-slider::-webkit-slider-thumb {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.75);
+    cursor: pointer;
+    margin-top: -4.5px;
+  }
+
+  #slider-gate {
+    border: 1px solid rgba(234, 179, 8, 0.35);
+    background: #232012;
+  }
+  #slider-gate::-webkit-slider-thumb {
+    border: 2.5px solid #eab308;
+  }
+
+  #slider-yard {
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    background: #261416;
+  }
+  #slider-yard::-webkit-slider-thumb {
+    border: 2.5px solid #ef4444;
+  }
+
+  #slider-rake {
+    border: 1px solid rgba(21, 128, 61, 0.4);
+    background: #122218;
+  }
+  #slider-rake::-webkit-slider-thumb {
+    border: 2.5px solid #15803d;
+  }
+
+  /* Standard Sensitivity Sliders */
+  input[type=range].sens-slider {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    width: 100%;
+    height: 7px;
+    border-radius: 999px;
+    background: #2a2e3d;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type=range].sens-slider::-webkit-slider-runnable-track {
+    background: transparent !important;
+    border: none !important;
+  }
+
+  input[type=range].sens-slider::-webkit-slider-thumb {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: var(--c-blue);
+    border: 2px solid #fff;
+    cursor: pointer;
+  }
+
+  .reset-btn {
+    background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+    color: #fff;
+    border: 1px solid #60a5fa;
+    border-radius: 5px;
+    padding: 2.5px 9px;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+  }
+
+  .reset-btn:hover {
+    background: linear-gradient(180deg, #60a5fa 0%, #3b82f6 100%);
+    transform: translateY(-1px);
+  }
+
+  /* Rate & Distance Mini Input Row */
+  .rate-dist-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    background: #11131a;
+    border: 1px solid #232735;
+    border-radius: 5px;
+    padding: 3px 6px;
+  }
+
+  .rd-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: #cbd5e1;
+  }
+
+  .rd-input {
+    background: #090a0f;
+    border: 1px solid #374151;
+    color: #38bdf8;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 10.5px;
+    padding: 1px 4px;
+    border-radius: 4px;
+    width: 58px;
+    text-align: right;
+  }
+
+  .rd-input:focus {
+    outline: none;
+    border-color: #38bdf8;
+  }
+
+  /* Readout Panel */
+  .readout-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex: 1;
+    gap: 5px;
+    min-height: 0;
+  }
+
+  .readout-group {
+    background: #171920;
+    border: 1px solid #262936;
+    border-radius: 6px;
+    padding: 5px 9px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3.5px;
+    flex: 1;
+  }
+
+  .readout-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10.5px;
+  }
+
+  .readout-label {
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .readout-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 11.5px;
+  }
+
+  .diff-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .diff-input {
+    background: #0d0f14;
+    border: 1px solid #374151;
+    color: #f3f4f6;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 11px;
+    padding: 1.5px 5px;
+    border-radius: 4px;
+    width: 72px;
+    text-align: right;
+  }
+
+  .diff-input:focus {
+    outline: none;
+    border-color: var(--c-blue);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+  }
+
+  .ref-mini {
+    font-size: 9px;
+    color: #6b7280;
+    font-family: 'JetBrains Mono', monospace;
+  }
+#input-model-speed::placeholder { color: var(--text-muted); opacity: 0.45; font-size: 8px; }
+
+
+  /* ============================================================
+     MOBILE LAYOUT — presentation only; calculations/controls unchanged
+     The desktop layout above remains untouched.
+     ============================================================ */
+  @media (max-width: 768px) {
+    html {
+      width: 100%;
+      min-height: 100%;
+      background: var(--bg-main);
+    }
+
+    body {
+      width: 100%;
+      min-height: 100dvh;
+      height: auto;
+      max-height: none;
+      overflow-x: hidden;
+      overflow-y: auto;
+      padding: 6px;
+      gap: 6px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Compact, single-line mobile header */
+    .exec-header {
+      min-height: 48px;
+      height: auto;
+      padding: 7px 8px;
+      gap: 7px;
+      align-items: center;
+    }
+
+    .brand-left {
+      flex: 1 1 auto;
+      min-width: 0;
+      gap: 7px;
+    }
+
+    .prism-badge {
+      width: 27px;
+      height: 27px;
+    }
+
+    .brand-titles {
+      min-width: 0;
+      display: block;
+    }
+
+    .brand-main {
+      display: block;
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 11.5px;
+      line-height: 1.2;
+    }
+
+    .brand-sub {
+      display: none;
+    }
+
+    .author-badge {
+      flex: 0 1 auto;
+      max-width: 48%;
+      min-width: 0;
+      padding: 4px 7px;
+      gap: 5px;
+    }
+
+    .accent-dot {
+      width: 6px;
+      height: 6px;
+      flex: 0 0 auto;
+    }
+
+    .author-text {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 9px;
+      letter-spacing: 0.15px;
+    }
+
+    /* KPIs become a compact 2-column stack instead of five squeezed cards */
+    .kpi-row {
+      width: 100%;
+      height: auto;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .kpi-card {
+      min-width: 0;
+      min-height: 64px;
+      padding: 7px 8px;
+      border-radius: 7px;
+    }
+
+    .kpi-title {
+      font-size: 8px;
+      letter-spacing: 0.35px;
+      gap: 4px;
+    }
+
+    .kpi-val {
+      font-size: 16px;
+      letter-spacing: -0.35px;
+    }
+
+    .kpi-badge {
+      max-width: 50%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 8.5px;
+      padding: 2px 4px;
+    }
+
+    .ref-mini {
+      font-size: 7.5px;
+    }
+
+    .alpha-input {
+      width: 60px;
+      font-size: 13px;
+    }
+
+    /* All dashboard sections become one easy vertical reading flow */
+    .mid-row,
+    .bot-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 6px;
+      flex: none;
+      min-height: 0;
+    }
+
+    .panel {
+      width: 100%;
+      min-width: 0;
+      min-height: 0;
+      padding: 8px;
+      border-radius: 8px;
+    }
+
+    .mid-row > .panel,
+    .bot-row > .panel {
+      min-height: 300px;
+    }
+
+    .mid-row > .panel:nth-child(1),
+    .mid-row > .panel:nth-child(2) {
+      height: 310px;
+    }
+
+    .mid-row > .panel:nth-child(3) {
+      height: 315px;
+    }
+
+    .bot-row > .panel:nth-child(1) {
+      height: 320px;
+    }
+
+    .bot-row > .panel:nth-child(2) {
+      height: 325px;
+    }
+
+    .bot-row > .panel:nth-child(3) {
+      height: 335px;
+    }
+
+    .panel-header {
+      gap: 6px;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+    }
+
+    .panel-title {
+      font-size: 10px;
+      line-height: 1.25;
+    }
+
+    .tag-badge {
+      font-size: 8px;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .chart-wrap {
+      min-height: 0;
+    }
+
+    .legend-row {
+      flex-wrap: wrap;
+      gap: 6px 10px;
+      margin-top: 5px;
+    }
+
+    .legend-item {
+      font-size: 8.5px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      flex: 0 0 auto;
+    }
+
+    /* Keep editable controls readable and tappable without changing their behavior */
+    .knobs-container,
+    .readout-container {
+      gap: 6px;
+    }
+
+    .knob-box,
+    .readout-group {
+      min-width: 0;
+      padding: 7px 8px;
+      border-radius: 6px;
+    }
+
+    .knob-top {
+      flex-wrap: wrap;
+      gap: 5px;
+      line-height: 1.25;
+    }
+
+    .knob-label {
+      min-width: 0;
+      flex: 1 1 150px;
+      flex-wrap: wrap;
+    }
+
+    .knob-drop-wrap {
+      flex: 1 1 150px;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .base-hr-input {
+      width: 54px;
+      min-height: 28px;
+    }
+
+    .knob-slider-row {
+      min-height: 28px;
+      gap: 7px;
+    }
+
+    input[type=range].syringe-slider {
+      min-height: 20px;
+      height: 12px;
+    }
+
+    input[type=range].sens-slider {
+      min-height: 24px;
+      height: 8px;
+    }
+
+    .mult-val {
+      width: 42px;
+      font-size: 10px;
+    }
+
+    .rate-dist-row {
+      flex-wrap: wrap;
+      gap: 5px;
+      padding: 5px;
+    }
+
+    .rd-item {
+      flex: 1 1 130px;
+      min-width: 0;
+      font-size: 9px;
+    }
+
+    .rd-input {
+      width: 62px;
+      min-height: 28px;
+    }
+
+    .reset-btn {
+      min-height: 28px;
+      padding: 4px 9px;
+      font-size: 9px;
+    }
+
+    .readout-line {
+      gap: 8px;
+      font-size: 9.5px;
+      flex-wrap: wrap;
+    }
+
+    .readout-label {
+      min-width: 0;
+      flex: 1 1 145px;
+    }
+
+    .readout-val {
+      font-size: 10.5px;
+    }
+
+    .diff-input {
+      min-height: 28px;
+      font-size: 10.5px;
+    }
+
+    /* The speed/share controls in the readout header wrap neatly on narrow phones. */
+    .bot-row > .panel:nth-child(3) .panel-header > div {
+      width: 100%;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+      row-gap: 4px;
+    }
+
+    .bot-row > .panel:nth-child(3) .panel-header > div .diff-input {
+      width: 62px !important;
+    }
+  }
+
+  @media (max-width: 380px) {
+    body {
+      padding: 5px;
+      gap: 5px;
+    }
+
+    .exec-header {
+      min-height: 46px;
+      padding: 6px;
+    }
+
+    .brand-main {
+      font-size: 10.5px;
+    }
+
+    .author-badge {
+      max-width: 42%;
+      padding: 3px 5px;
+    }
+
+    .author-text {
+      font-size: 8px;
+    }
+
+    .kpi-row {
+      gap: 5px;
+    }
+
+    .kpi-card {
+      min-height: 61px;
+      padding: 6px 7px;
+    }
+
+    .kpi-title {
+      font-size: 7.5px;
+    }
+
+    .kpi-val {
+      font-size: 15px;
+    }
+
+    .mid-row > .panel:nth-child(1),
+    .mid-row > .panel:nth-child(2) {
+      height: 295px;
+    }
+
+    .mid-row > .panel:nth-child(3) {
+      height: 310px;
+    }
+
+    .bot-row > .panel:nth-child(1) {
+      height: 305px;
+    }
+
+    .bot-row > .panel:nth-child(2) {
+      height: 315px;
+    }
+
+    .bot-row > .panel:nth-child(3) {
+      height: 325px;
+    }
+  }
+
+</style>
+</head>
+<body>
+
+  <!-- 1. TOP EXECUTIVE HEADER BAR -->
+  <header class="exec-header">
+    <div class="brand-left">
+      <div class="prism-badge">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 2 22 22 22 12 2"></polygon>
+          <line x1="12" y1="2" x2="12" y2="22" stroke="rgba(56,189,248,0.5)"></line>
+        </svg>
+      </div>
+      <div class="brand-titles">
+        <span class="brand-main">PRISM — Predictive Rail Intermodal Share Modeler</span>
+        <span class="brand-sub">Generalized Multi-Corridor Differential-Logit Engine for Door-to-Door Freight Elasticity &amp; Terminal Optimization</span>
+      </div>
+    </div>
+
+    <div class="author-badge">
+      <span class="accent-dot"></span>
+      <span class="author-text">Kumud Bartwal, IRMS Traffic 2023</span>
+    </div>
+  </header>
+
+  <!-- 2. ROW 1: 5 EXECUTIVE KPI CARDS -->
+  <div class="kpi-row">
+    <!-- Card 1: Total Terminal Friction -->
+    <div class="kpi-card">
+      <div class="kpi-title">
+        <span>Total Terminal Friction</span>
+        <span class="ref-mini" id="kpi-base-friction-lbl">Base: 44.0h</span>
+      </div>
+      <div class="kpi-value-row">
+        <span class="kpi-val" id="kpi-friction">44.0h</span>
+        <span class="kpi-badge" id="kpi-friction-delta" style="color:#4ade80;">-0.0h</span>
+      </div>
+    </div>
+
+    <!-- Card 2: Terminal Time Saved -->
+    <div class="kpi-card">
+      <div class="kpi-title">
+        <span>Terminal Time Saved</span>
+        <span class="ref-mini">1.0x ➔ Opt</span>
+      </div>
+      <div class="kpi-value-row">
+        <span class="kpi-val" id="kpi-saved" style="color:#4ade80;">0.0h</span>
+        <span class="kpi-badge" style="color:#4ade80;">Optimized</span>
+      </div>
+    </div>
+
+    <!-- Card 3: Terminal Efficiency Gain -->
+    <div class="kpi-card">
+      <div class="kpi-title">
+        <span>Terminal Efficiency Gain</span>
+        <span class="ref-mini">% Reduction</span>
+      </div>
+      <div class="kpi-value-row">
+        <span class="kpi-val" id="kpi-eff" style="color:#60a5fa;">0.0%</span>
+        <span class="kpi-badge" style="color:#60a5fa;">Speedup</span>
+      </div>
+    </div>
+
+    <!-- Card 4: Editable Rail Penalty (α) -->
+    <div class="kpi-card">
+      <div class="kpi-title">
+        <span>Rail Penalty (α) <span class="ref-mini">(Ref: -4.00)</span></span>
+        <span class="ref-mini" id="kpi-alpha-eff" style="color:#fca5a5;">Eff: -4.00</span>
+      </div>
+      <div class="kpi-value-row">
+        <input type="number" id="input-alpha" class="alpha-input" step="0.1" value="-4.00" title="Edit Route Baseline Rail Penalty (α)">
+        <span class="kpi-badge" id="kpi-alpha-bracket" style="color:#cbd5e1;">[ +0.0h Saved ]</span>
+      </div>
+    </div>
+
+    <!-- Card 5: Share @ 50 km/h -->
+    <div class="kpi-card">
+      <div class="kpi-title">
+        <span>Share @ 50 km/h</span>
+        <span class="ref-mini">Ref: 10.2%</span>
+      </div>
+      <div class="kpi-value-row">
+        <span class="kpi-val" id="kpi-share50" style="color:#38bdf8;">10.2%</span>
+        <span class="kpi-badge" id="kpi-share50-delta" style="color:#4ade80;">+0.0%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. ROW 2: MIDDLE SECTION (3 equal columns) -->
+  <div class="mid-row">
+    <!-- Col 1: Terminal Hours Breakdown -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Terminal Hours Breakdown</span>
+        <span class="tag-badge" id="badge-term-scale">AUTO Y-SCALE (50H)</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chartTerminal"></canvas>
+      </div>
+      <div class="legend-row">
+        <div class="legend-item"><span class="dot" style="background:var(--c-gate);"></span>Gate</div>
+        <div class="legend-item"><span class="dot" style="background:var(--c-yard);"></span>Crane &amp; Yard</div>
+        <div class="legend-item"><span class="dot" style="background:var(--c-rake);"></span>Rake Aggregation</div>
+      </div>
+    </div>
+
+    <!-- Col 2: Journey Stage Breakdown -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Journey Stage Breakdown</span>
+        <span class="tag-badge" id="badge-stage-scale">AUTO Y-SCALE (30H)</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chartJourney"></canvas>
+      </div>
+      <div class="legend-row">
+        <div class="legend-item"><span class="dot" style="background:var(--c-transit);"></span>Transit</div>
+        <div class="legend-item"><span class="dot" style="background:var(--c-gate);"></span>Gate</div>
+        <div class="legend-item"><span class="dot" style="background:var(--c-yard);"></span>Crane &amp; Yard</div>
+        <div class="legend-item"><span class="dot" style="background:var(--c-rake);"></span>Rake Aggregation</div>
+      </div>
+    </div>
+
+    <!-- Col 3: Terminal Efficiency Knobs (Editable 1.0x Baselines + Syringe Sliders) -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Terminal Efficiency Knobs</span>
+        <span class="tag-badge">EDITABLE 1.0X BASE ➔ 3.0X</span>
+      </div>
+      <div class="knobs-container">
+        <!-- Knob 1: Gate Digitization (Yellow) -->
+        <div class="knob-box">
+          <div class="knob-top">
+            <span class="knob-label">
+              <span class="dot" style="background:var(--c-gate);"></span>Gate Digitization <span class="ref-mini">(Ref: 10h)</span>
+            </span>
+            <div class="knob-drop-wrap">
+              <span style="color:#9ca3af;">[1x:</span>
+              <input type="number" id="input-base-gate" class="base-hr-input" min="0" max="200" step="1" value="10.0" title="Edit 1.0x Baseline Gate Hours">
+              <span style="color:#9ca3af;">h ➔</span>
+              <span id="opt-gate-lbl" style="color:#eab308; font-weight:700;">10.0h]</span>
+            </div>
+          </div>
+          <div class="knob-slider-row">
+            <input type="range" id="slider-gate" class="syringe-slider" min="1.0" max="3.0" step="0.1" value="1.0">
+            <span class="mult-val" id="val-gate" style="color:#eab308;">1.0x</span>
+          </div>
+        </div>
+
+        <!-- Knob 2: Crane & Yard (Red) -->
+        <div class="knob-box">
+          <div class="knob-top">
+            <span class="knob-label">
+              <span class="dot" style="background:var(--c-yard);"></span>Crane &amp; Yard <span class="ref-mini">(Ref: 20h)</span>
+            </span>
+            <div class="knob-drop-wrap">
+              <span style="color:#9ca3af;">[1x:</span>
+              <input type="number" id="input-base-yard" class="base-hr-input" min="0" max="200" step="1" value="20.0" title="Edit 1.0x Baseline Crane & Yard Hours">
+              <span style="color:#9ca3af;">h ➔</span>
+              <span id="opt-yard-lbl" style="color:#ef4444; font-weight:700;">20.0h]</span>
+            </div>
+          </div>
+          <div class="knob-slider-row">
+            <input type="range" id="slider-yard" class="syringe-slider" min="1.0" max="3.0" step="0.1" value="1.0">
+            <span class="mult-val" id="val-yard" style="color:#ef4444;">1.0x</span>
+          </div>
+        </div>
+
+        <!-- Knob 3: Rake Aggregation (Darker Green) -->
+        <div class="knob-box">
+          <div class="knob-top">
+            <span class="knob-label">
+              <span class="dot" style="background:var(--c-rake);"></span>Rake Aggregation <span class="ref-mini">(Ref: 14h)</span>
+            </span>
+            <div class="knob-drop-wrap">
+              <span style="color:#9ca3af;">[1x:</span>
+              <input type="number" id="input-base-rake" class="base-hr-input" min="0" max="200" step="1" value="14.0" title="Edit 1.0x Baseline Rake Aggregation Hours">
+              <span style="color:#9ca3af;">h ➔</span>
+              <span id="opt-rake-lbl" style="color:#4ade80; font-weight:700;">14.0h]</span>
+            </div>
+          </div>
+          <div class="knob-slider-row">
+            <input type="range" id="slider-rake" class="syringe-slider" min="1.0" max="3.0" step="0.1" value="1.0">
+            <span class="mult-val" id="val-rake" style="color:#4ade80;">1.0x</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. ROW 3: BOTTOM SECTION (3 equal columns) -->
+  <div class="bot-row">
+    <!-- Left: Modal Share Logit S-Curve (Full Height) -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Modal Share Logit S-Curve</span>
+        <span class="tag-badge" id="badge-scurve-dist">DIST: 2,100 KM | 15–75 KM/H</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chartSCurve"></canvas>
+      </div>
+      <div class="legend-row">
+        <div class="legend-item"><span class="dot" style="background:#9ca3af;"></span>Ref Baseline</div>
+        <div class="legend-item"><span class="dot" style="background:var(--c-amber);"></span>Updated Baseline</div>
+        <div class="legend-item"><span class="dot" style="background:var(--c-blue);"></span>Optimized</div>
+      </div>
+    </div>
+
+    <!-- Middle: Logit Market Sensitivities (Editable Rate/km & Distance) -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Logit Market Sensitivities</span>
+        <button class="reset-btn" id="btn-reset">Reset Ref</button>
+      </div>
+      <div class="knobs-container">
+        <!-- Box 1: Rail Freight Cost with Editable Rate/km & Distance -->
+        <div class="knob-box">
+          <div class="knob-top">
+            <span>Rail Freight Cost <span class="ref-mini">(33.33/km × 2100km)</span></span>
+            <span class="tag-badge" id="val-cost" style="color:#38bdf8; border-color:#1e3a8a;">₹70,000</span>
+          </div>
+          <div class="rate-dist-row">
+            <div class="rd-item">
+              <span>Rate (₹/km):</span>
+              <input type="number" id="input-rate-km" class="rd-input" step="0.5" min="1" value="33.33" title="Edit Rail Haulage Cost per km (Ref: ₹33.33/km)">
+            </div>
+            <div class="rd-item">
+              <span>Dist (km):</span>
+              <input type="number" id="input-dist-km" class="rd-input" step="50" min="50" value="2100" title="Edit Corridor Distance in km (Ref: 2,100 km)">
+            </div>
+          </div>
+          <div class="knob-slider-row">
+            <input type="range" id="slider-cost" class="sens-slider" min="10000" max="200000" step="1000" value="70000">
+          </div>
+        </div>
+
+        <!-- Box 2: Cost Sensitivity -->
+        <div class="knob-box">
+          <div class="knob-top">
+            <span>Cost Sensitivity (β<sub>cost</sub>)</span>
+            <span class="tag-badge">Ref: -0.00010</span>
+          </div>
+          <div class="knob-slider-row">
+            <input type="range" id="slider-bcost" class="sens-slider" min="0.00002" max="0.00025" step="0.00001" value="0.00010">
+            <span class="mult-val" id="val-bcost" style="width:66px; color:#38bdf8;">-0.00010</span>
+          </div>
+        </div>
+
+        <!-- Box 3: FMCG Time Sensitivity -->
+        <div class="knob-box">
+          <div class="knob-top">
+            <span>FMCG Time Sensitivity (β<sub>time</sub>)</span>
+            <span class="tag-badge">Ref: -0.016</span>
+          </div>
+          <div class="knob-slider-row">
+            <input type="range" id="slider-btime" class="sens-slider" min="0.004" max="0.040" step="0.002" value="0.016">
+            <span class="mult-val" id="val-btime" style="width:66px; color:#38bdf8;">-0.016</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Executive Live Readout with Editable Differentials & Road Cost -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Executive Live Readout</span>
+        <div style="display:flex; align-items:center; gap:6px; font-size:10px; white-space:nowrap;">
+          <label for="input-model-speed" style="color:var(--c-amber);">Speed</label>
+          <input type="number" id="input-model-speed" class="diff-input" min="1" max="300" step="1" value="50" placeholder="up to 300" style="width:68px;" title="Enter speed in km/h (maximum 300)">
+          <span style="color:var(--text-muted);">km/h</span>
+          <label for="input-model-share" style="color:#38bdf8; margin-left:4px;">Share</label>
+          <input type="number" id="input-model-share" class="diff-input" min="0" max="100" step="0.1" value="10.2" style="width:58px;" title="Enter desired optimized rail modal share (%)">
+          <span style="color:var(--text-muted);">%</span>
+        </div>
+      </div>
+      <div class="readout-container">
+        <!-- Group 1: Shares -->
+        <div class="readout-group">
+          <div class="readout-line">
+            <span class="readout-label">Updated Baseline Share</span>
+            <span class="readout-val" id="ro-base-share" style="color:var(--c-amber);">10.2%</span>
+          </div>
+          <div class="readout-line">
+            <span class="readout-label">Optimized Rail Share</span>
+            <span class="readout-val" id="ro-opt-share" style="color:#38bdf8;">10.2%</span>
+          </div>
+        </div>
+
+        <!-- Group 2: Editable Differentials & Corresponding Road Cost -->
+        <div class="readout-group">
+          <div class="readout-line">
+            <span class="readout-label">Door-to-Door Delta Time <span class="ref-mini">(Ref: +11.4h)</span></span>
+            <div class="diff-input-wrap">
+              <input type="number" id="input-dtime" class="diff-input" step="0.1" value="11.4" title="Edit Door-to-Door Delta Time at 50 km/h (hours)">
+              <span style="font-size:10.5px; color:var(--text-muted);">h</span>
+            </div>
+          </div>
+          <div class="readout-line">
+            <span class="readout-label">Door-to-Door Delta Cost <span class="ref-mini">(Ref: -₹13,000)</span></span>
+            <span class="readout-val" id="ro-dcost" style="color:#fbbf24;">-₹13,000</span>
+          </div>
+          <div class="readout-line" style="border-top: 1px dashed #262936; padding-top: 3px; margin-top: 1px;">
+            <span class="readout-label">Road Cost <span class="ref-mini">(Ref: ₹95,000)</span></span>
+            <div class="diff-input-wrap">
+              <span style="font-size:10.5px; color:var(--text-muted);">₹</span>
+              <input type="number" id="input-road-cost" class="diff-input" step="500" min="0" value="95000" title="Enter Road Door-to-Door Cost (INR). Delta Cost is calculated as Rail D2D minus Road D2D.">
+            </div>
+          </div>
+          <div class="readout-line">
+            <span class="readout-label">Rail D2D Cost <span class="ref-mini" id="ro-rail-d2d-lbl">(Rail Freight + First/Last Mile)</span></span>
+            <span class="readout-val" id="ro-rail-d2d" style="color:#38bdf8;">₹82,000</span>
+          </div>
+        </div>
+
+        <!-- Group 3: Utilities -->
+        <div class="readout-group">
+          <div class="readout-line">
+            <span class="readout-label">Rail Utility (U<sub>rail</sub>)</span>
+            <span class="readout-val" id="ro-urail" style="color:#4ade80;">-14.18</span>
+          </div>
+          <div class="readout-line">
+            <span class="readout-label">Road Benchmark Utility</span>
+            <span class="readout-val" style="color:#9ca3af;">-12.00</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // --- REFERENCE CONSTANTS (DELHI–BENGALURU CORRIDOR) ---
+  const REF = {
+    baseGate: 10.0,
+    baseYard: 20.0,
+    baseRake: 14.0,
+    gateMult: 1.0,
+    yardMult: 1.0,
+    rakeMult: 1.0,
+    ratePerKm: 33.333333, // ₹33.33/km * 2,100 km = ₹70,000
+    distanceKm: 2100,
+    cost: 70000,
+    fmlmCost: 12000,      // First-Mile (₹6k) + Last-Mile (₹6k) = ₹12,000
+    roadCost: 95000,      // Road D2D Cost = ₹95,000
+    bcost: -0.00010,
+    btime: -0.016,
+    refDeltaTimeAt50: 11.4,
+    refDeltaCost: -13000, // ₹82,000 Rail D2D - ₹95,000 Road D2D = -₹13,000
+    alphaBase: -4.00,
+    uRoad: -12.00
+  };
+
+  let state = {
+    baseGate: 10.0,
+    baseYard: 20.0,
+    baseRake: 14.0,
+    gateMult: 1.0,
+    yardMult: 1.0,
+    rakeMult: 1.0,
+    ratePerKm: 33.33,
+    distanceKm: 2100,
+    cost: 70000,
+    roadCost: 95000,
+    bcost: -0.00010,
+    btime: -0.016,
+    customDeltaTime50: 11.4,
+    customDeltaCost: -13000,
+    alphaBase: -4.00,
+    hoverSpeed: 50
+  };
+
+  // Syringe slider background fill helper with custom dark color-tinged base track at 1.0x
+  function updateSyringeFill(sliderEl, fillHex, emptyTingeHex) {
+    const min = parseFloat(sliderEl.min);
+    const max = parseFloat(sliderEl.max);
+    const val = parseFloat(sliderEl.value);
+    const pct = ((val - min) / (max - min)) * 100;
+    sliderEl.style.background = `linear-gradient(90deg, ${fillHex} 0%, ${fillHex} ${pct}%, ${emptyTingeHex} ${pct}%, ${emptyTingeHex} 100%)`;
+  }
+
+  function updateSensSliderFill(sliderEl) {
+    const min = parseFloat(sliderEl.min);
+    const max = parseFloat(sliderEl.max);
+    const val = Math.min(max, Math.max(min, parseFloat(sliderEl.value)));
+    const pct = ((val - min) / (max - min)) * 100;
+    sliderEl.style.background = `linear-gradient(90deg, #3b82f6 0%, #3b82f6 ${pct}%, #2a2e3d ${pct}%, #2a2e3d 100%)`;
+  }
+
+  // --- INITIALIZE CHARTS ---
+  Chart.defaults.color = '#9ca3af';
+  Chart.defaults.font.family = "'Inter', sans-serif";
+  Chart.defaults.font.size = 10;
+
+  // Chart 1: Terminal Hours Breakdown
+  const ctxTerm = document.getElementById('chartTerminal').getContext('2d');
+  const chartTerminal = new Chart(ctxTerm, {
+    type: 'bar',
+    data: {
+      labels: ['Baseline (1.0x)', 'Optimized'],
+      datasets: [
+        { label: 'Gate', data: [10, 10], backgroundColor: '#eab308', borderRadius: 4, barPercentage: 0.45 },
+        { label: 'Crane & Yard', data: [20, 20], backgroundColor: '#ef4444', borderRadius: 4, barPercentage: 0.45 },
+        { label: 'Rake Aggregation', data: [14, 14], backgroundColor: '#15803d', borderRadius: 4, barPercentage: 0.45 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { stacked: true, grid: { display: false } },
+        y: {
+          stacked: true,
+          min: 0,
+          max: 50,
+          grid: { color: '#1f2430' },
+          ticks: { callback: (v) => v + 'h' }
+        }
+      }
+    }
+  });
+
+  // Chart 2: Journey Stage Breakdown
+  const ctxJourney = document.getElementById('chartJourney').getContext('2d');
+  const chartJourney = new Chart(ctxJourney, {
+    type: 'bar',
+    data: {
+      labels: ['Orig FM', 'Orig Term', 'Dest Term', 'Dest LM'],
+      datasets: [
+        { label: 'Transit', data: [2.0, 0, 0, 2.0], backgroundColor: '#2563eb', borderRadius: 4, barPercentage: 0.5 },
+        { label: 'Gate', data: [0, 6.0, 4.0, 0], backgroundColor: '#eab308', borderRadius: 4, barPercentage: 0.5 },
+        { label: 'Crane & Yard', data: [0, 8.0, 12.0, 0], backgroundColor: '#ef4444', borderRadius: 4, barPercentage: 0.5 },
+        { label: 'Rake Aggregation', data: [0, 14.0, 0, 0], backgroundColor: '#15803d', borderRadius: 4, barPercentage: 0.5 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { stacked: true, grid: { display: false } },
+        y: {
+          stacked: true,
+          min: 0,
+          max: 30,
+          grid: { color: '#1f2430' },
+          ticks: { callback: (v) => v + 'h' }
+        }
+      }
+    }
+  });
+
+  // Chart 3: Modal Share Logit S-Curve
+  const speeds = [];
+  for (let s = 15; s <= 75; s += 5) speeds.push(s);
+
+  const ctxSCurve = document.getElementById('chartSCurve').getContext('2d');
+  const chartSCurve = new Chart(ctxSCurve, {
+    type: 'line',
+    data: {
+      labels: speeds.map(s => s + ' km/h'),
+      datasets: [
+        {
+          label: 'Ref Baseline',
+          data: [],
+          borderColor: '#6b7280',
+          borderDash: [5, 5],
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0.35
+        },
+        {
+          label: 'Updated Baseline',
+          data: [],
+          borderColor: '#f59e0b',
+          borderDash: [3, 3],
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0.35
+        },
+        {
+          label: 'Optimized',
+          data: [],
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59, 130, 246, 0.14)',
+          fill: true,
+          borderWidth: 3,
+          pointRadius: 2,
+          pointHoverRadius: 5,
+          tension: 0.35
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          enabled: true,
+          callbacks: {
+            title: (items) => {
+              const idx = items[0].dataIndex;
+              state.hoverSpeed = speeds[idx];
+              updateReadoutOnly();
+              return `Speed: ${speeds[idx]} km/h`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color: '#1f2430' } },
+        y: {
+          min: 0,
+          max: 40,
+          grid: { color: '#1f2430' },
+          ticks: { callback: (v) => v + '%' }
+        }
+      }
+    }
+  });
+
+  // Calibrated Differential Logit Utility Function
+  const CALIB_OFFSET = -11.30;
+
+  function calcShare(speed, distanceKm, alphaBase, deltaCost, deltaTimeAt50, bcost, btime, timeSaved) {
+    const transitAt50 = distanceKm / 50.0;
+    const transitDiffFrom50 = (distanceKm / speed) - transitAt50;
+    const effectiveDeltaTime = deltaTimeAt50 + transitDiffFrom50 - timeSaved;
+    const alphaDynamic = alphaBase + (timeSaved * 0.045);
+    const uRail = alphaDynamic + CALIB_OFFSET + (bcost * deltaCost) + (btime * effectiveDeltaTime);
+    const share = (Math.exp(uRail) / (Math.exp(uRail) + Math.exp(REF.uRoad))) * 100;
+    return { share, uRail, effectiveDeltaTime, alphaDynamic };
+  }
+
+  function getFrictionMetrics() {
+    const origGateBase = state.baseGate * 0.60;
+    const destGateBase = state.baseGate * 0.40;
+    const origYardBase = state.baseYard * 0.40;
+    const destYardBase = state.baseYard * 0.60;
+    const origRakeBase = state.baseRake;
+
+    const origGateOpt = origGateBase / state.gateMult;
+    const destGateOpt = destGateBase / state.gateMult;
+    const totalGateOpt = origGateOpt + destGateOpt;
+
+    const origYardOpt = origYardBase / state.yardMult;
+    const destYardOpt = destYardBase / state.yardMult;
+    const totalYardOpt = origYardOpt + destYardOpt;
+
+    const origRakeOpt = origRakeBase / state.rakeMult;
+    const totalRakeOpt = origRakeOpt;
+
+    const baseFriction = state.baseGate + state.baseYard + state.baseRake;
+    const optFriction = totalGateOpt + totalYardOpt + totalRakeOpt;
+    const timeSaved = baseFriction - optFriction;
+    const effGain = baseFriction > 0 ? (timeSaved / baseFriction) * 100 : 0;
+
+    return {
+      origGateBase, destGateBase, origYardBase, destYardBase, origRakeBase,
+      origGateOpt, destGateOpt, totalGateOpt,
+      origYardOpt, destYardOpt, totalYardOpt,
+      origRakeOpt, totalRakeOpt,
+      baseFriction, optFriction, timeSaved, effGain
+    };
+  }
+
+  function updateDashboard() {
+    const fm = getFrictionMetrics();
+
+    // 1. Update Top KPIs
+    document.getElementById('kpi-base-friction-lbl').textContent = `Base: ${fm.baseFriction.toFixed(1)}h`;
+    document.getElementById('kpi-friction').textContent = fm.optFriction.toFixed(1) + 'h';
+    document.getElementById('kpi-friction-delta').textContent = '-' + fm.timeSaved.toFixed(1) + 'h';
+    document.getElementById('kpi-saved').textContent = fm.timeSaved.toFixed(1) + 'h';
+    document.getElementById('kpi-eff').textContent = fm.effGain.toFixed(1) + '%';
+
+    const alphaNow = state.alphaBase + (fm.timeSaved * 0.045);
+    document.getElementById('kpi-alpha-eff').textContent = `Eff: ${alphaNow.toFixed(2)}`;
+    document.getElementById('kpi-alpha-bracket').textContent = `[ +${fm.timeSaved.toFixed(1)}h Saved ]`;
+
+    // 2. Update Terminal Knob Labels & Color-Tinged Syringe Fills
+    document.getElementById('val-gate').textContent = state.gateMult.toFixed(1) + 'x';
+    document.getElementById('opt-gate-lbl').textContent = `${fm.totalGateOpt.toFixed(1)}h]`;
+    updateSyringeFill(document.getElementById('slider-gate'), '#eab308', '#232012');
+
+    document.getElementById('val-yard').textContent = state.yardMult.toFixed(1) + 'x';
+    document.getElementById('opt-yard-lbl').textContent = `${fm.totalYardOpt.toFixed(1)}h]`;
+    updateSyringeFill(document.getElementById('slider-yard'), '#ef4444', '#261416');
+
+    document.getElementById('val-rake').textContent = state.rakeMult.toFixed(1) + 'x';
+    document.getElementById('opt-rake-lbl').textContent = `${fm.totalRakeOpt.toFixed(1)}h]`;
+    updateSyringeFill(document.getElementById('slider-rake'), '#15803d', '#122218');
+
+    // 3. Update Sensitivity Slider Fills & Badges
+    updateSensSliderFill(document.getElementById('slider-cost'));
+    updateSensSliderFill(document.getElementById('slider-bcost'));
+    updateSensSliderFill(document.getElementById('slider-btime'));
+    document.getElementById('badge-scurve-dist').textContent = `DIST: ${Math.round(state.distanceKm).toLocaleString('en-IN')} KM | 15–75 KM/H`;
+
+    // 4. Update Chart 1 (Terminal Hours Breakdown) with Dynamic Y-Axis Auto-Scaling
+    const termYMax = Math.max(10, Math.ceil((fm.baseFriction * 1.15) / 10) * 10);
+    chartTerminal.options.scales.y.max = termYMax;
+    document.getElementById('badge-term-scale').textContent = `AUTO Y-SCALE (${termYMax}H)`;
+
+    chartTerminal.data.datasets[0].data = [state.baseGate, fm.totalGateOpt];
+    chartTerminal.data.datasets[1].data = [state.baseYard, fm.totalYardOpt];
+    chartTerminal.data.datasets[2].data = [state.baseRake, fm.totalRakeOpt];
+    chartTerminal.update('none');
+
+    // 5. Update Chart 2 (Journey Stage Breakdown) with Dynamic Y-Axis Auto-Scaling
+    const origTermBaseTotal = fm.origGateBase + fm.origYardBase + fm.origRakeBase;
+    const destTermBaseTotal = fm.destGateBase + fm.destYardBase;
+    const maxStage = Math.max(4, origTermBaseTotal, destTermBaseTotal);
+    const stageYMax = Math.max(10, Math.ceil((maxStage * 1.15) / 5) * 5);
+    chartJourney.options.scales.y.max = stageYMax;
+    document.getElementById('badge-stage-scale').textContent = `AUTO Y-SCALE (${stageYMax}H)`;
+
+    chartJourney.data.datasets[1].data = [0, fm.origGateOpt, fm.destGateOpt, 0];
+    chartJourney.data.datasets[2].data = [0, fm.origYardOpt, fm.destYardOpt, 0];
+    chartJourney.data.datasets[3].data = [0, fm.origRakeOpt, 0, 0];
+    chartJourney.update('none');
+
+    // 6. Update Rail D2D, Road Cost input, and calculated Door-to-Door Delta Cost
+    // Delta Cost is always calculated as: Rail D2D Cost - Road D2D Cost.
+    const totalRailD2D = state.cost + REF.fmlmCost;
+    state.customDeltaCost = totalRailD2D - state.roadCost;
+    document.getElementById('input-road-cost').value = Math.round(state.roadCost);
+    document.getElementById('ro-dcost').textContent = (state.customDeltaCost >= 0 ? '+₹' : '-₹') + Math.abs(Math.round(state.customDeltaCost)).toLocaleString('en-IN');
+    document.getElementById('ro-rail-d2d-lbl').textContent = `(₹${Math.round(state.cost).toLocaleString('en-IN')} rail + ₹${Math.round(REF.fmlmCost).toLocaleString('en-IN')} FMLM)`;
+    document.getElementById('ro-rail-d2d').textContent = '₹' + Math.round(totalRailD2D).toLocaleString('en-IN');
+
+    // 7. Update Chart 3 (Modal Share Logit S-Curve)
+    const refCurve = [];
+    const updBaseCurve = [];
+    const optCurve = [];
+
+    speeds.forEach(s => {
+      const r = calcShare(s, REF.distanceKm, REF.alphaBase, REF.refDeltaCost, REF.refDeltaTimeAt50, REF.bcost, REF.btime, 0);
+      const u = calcShare(s, state.distanceKm, state.alphaBase, state.customDeltaCost, state.customDeltaTime50, state.bcost, state.btime, 0);
+      const o = calcShare(s, state.distanceKm, state.alphaBase, state.customDeltaCost, state.customDeltaTime50, state.bcost, state.btime, fm.timeSaved);
+      refCurve.push(r.share);
+      updBaseCurve.push(u.share);
+      optCurve.push(o.share);
+    });
+
+    const maxShare = Math.max(...optCurve, ...updBaseCurve, 40);
+    const yCeiling = maxShare > 40 ? Math.min(100, Math.ceil(maxShare / 10) * 10) : 40;
+    chartSCurve.options.scales.y.max = yCeiling;
+
+    chartSCurve.data.datasets[0].data = refCurve;
+    chartSCurve.data.datasets[1].data = updBaseCurve;
+    chartSCurve.data.datasets[2].data = optCurve;
+    chartSCurve.update('none');
+
+    // 8. KPI @ 50 km/h
+    const base50 = calcShare(50, state.distanceKm, state.alphaBase, state.customDeltaCost, state.customDeltaTime50, state.bcost, state.btime, 0).share;
+    const opt50 = calcShare(50, state.distanceKm, state.alphaBase, state.customDeltaCost, state.customDeltaTime50, state.bcost, state.btime, fm.timeSaved).share;
+    document.getElementById('kpi-share50').textContent = opt50.toFixed(1) + '%';
+    const diff50 = opt50 - base50;
+    document.getElementById('kpi-share50-delta').textContent = (diff50 >= 0 ? '+' : '') + diff50.toFixed(1) + '%';
+
+    updateReadoutOnly();
+  }
+
+  function updateReadoutOnly() {
+    const fm = getFrictionMetrics();
+    const s = state.hoverSpeed;
+    const u = calcShare(s, state.distanceKm, state.alphaBase, state.customDeltaCost, state.customDeltaTime50, state.bcost, state.btime, 0);
+    const o = calcShare(s, state.distanceKm, state.alphaBase, state.customDeltaCost, state.customDeltaTime50, state.bcost, state.btime, fm.timeSaved);
+
+    document.getElementById('input-model-speed').value = Number(s.toFixed(1));
+    document.getElementById('input-model-share').value = o.share.toFixed(1);
+    document.getElementById('ro-base-share').textContent = u.share.toFixed(1) + '%';
+    document.getElementById('ro-opt-share').textContent = o.share.toFixed(1) + '%';
+    document.getElementById('ro-urail').textContent = o.uRail.toFixed(2);
+  }
+
+  // Helper when 1.0x Baseline Terminal Hours are edited
+  function handleBaseTerminalHoursChange() {
+    const newBaseFriction = state.baseGate + state.baseYard + state.baseRake;
+    // Automatically shift 50 km/h Door-to-Door Delta Time relative to 44.0h reference
+    state.customDeltaTime50 = parseFloat((REF.refDeltaTimeAt50 + (newBaseFriction - 44.0)).toFixed(1));
+    document.getElementById('input-dtime').value = state.customDeltaTime50;
+    updateDashboard();
+  }
+
+  // --- EVENT LISTENERS ---
+
+  // 1. Editable Route Baseline Rail Penalty (α)
+  document.getElementById('input-alpha').addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    if (!isNaN(val)) {
+      state.alphaBase = val;
+      updateDashboard();
+    }
+  });
+
+  // 2. Editable 1.0x Baseline Terminal Hours (Gate, Yard, Rake)
+  document.getElementById('input-base-gate').addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    if (!isNaN(val) && val >= 0) {
+      state.baseGate = val;
+      handleBaseTerminalHoursChange();
+    }
+  });
+  document.getElementById('input-base-yard').addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    if (!isNaN(val) && val >= 0) {
+      state.baseYard = val;
+      handleBaseTerminalHoursChange();
+    }
+  });
+  document.getElementById('input-base-rake').addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    if (!isNaN(val) && val >= 0) {
+      state.baseRake = val;
+      handleBaseTerminalHoursChange();
+    }
+  });
+
+  // 3. Terminal Efficiency Multiplier Sliders (1.0x -> 3.0x)
+  document.getElementById('slider-gate').addEventListener('input', (e) => {
+    state.gateMult = parseFloat(e.target.value);
+    updateDashboard();
+  });
+  document.getElementById('slider-yard').addEventListener('input', (e) => {
+    state.yardMult = parseFloat(e.target.value);
+    updateDashboard();
+  });
+  document.getElementById('slider-rake').addEventListener('input', (e) => {
+    state.rakeMult = parseFloat(e.target.value);
+    updateDashboard();
+  });
+
+  // 4. Editable Rate (₹/km) and Distance (km)
+  function recalcCostFromRateAndDist() {
+    state.cost = Math.round(state.ratePerKm * state.distanceKm);
+    document.getElementById('val-cost').textContent = '₹' + state.cost.toLocaleString('en-IN');
+    document.getElementById('slider-cost').value = Math.min(200000, Math.max(10000, state.cost));
+    // Road Cost is the user-controlled variable; Delta Cost is derived from it.
+    updateDashboard();
+  }
+
+  document.getElementById('input-rate-km').addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    if (!isNaN(val) && val >= 0) {
+      state.ratePerKm = val;
+      recalcCostFromRateAndDist();
+    }
+  });
+
+  document.getElementById('input-dist-km').addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    if (!isNaN(val) && val > 0) {
+      state.distanceKm = val;
+      recalcCostFromRateAndDist();
+    }
+  });
+
+  // 5. Rail Freight Cost Slider (Updates Rate/km given current Distance, and updates Delta Cost)
+  document.getElementById('slider-cost').addEventListener('input', (e) => {
+    state.cost = parseFloat(e.target.value);
+    state.ratePerKm = state.cost / state.distanceKm;
+    document.getElementById('input-rate-km').value = state.ratePerKm.toFixed(2);
+    document.getElementById('val-cost').textContent = '₹' + state.cost.toLocaleString('en-IN');
+    // Road Cost remains the independent input; Delta Cost is recalculated in updateDashboard().
+    updateDashboard();
+  });
+
+  // 6. Logit Beta Sliders
+  document.getElementById('slider-bcost').addEventListener('input', (e) => {
+    state.bcost = -parseFloat(e.target.value);
+    document.getElementById('val-bcost').textContent = state.bcost.toFixed(5);
+    updateDashboard();
+  });
+
+  document.getElementById('slider-btime').addEventListener('input', (e) => {
+    state.btime = -parseFloat(e.target.value);
+    document.getElementById('val-btime').textContent = state.btime.toFixed(3);
+    updateDashboard();
+  });
+
+  // 7. Direct Manual Numeric Input for Door-to-Door Delta Time + Road Cost
+  document.getElementById('input-dtime').addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    if (!isNaN(val)) {
+      state.customDeltaTime50 = val;
+      updateDashboard();
+    }
+  });
+
+  // Road Cost is the independent variable. Delta Cost is always derived as Rail D2D - Road D2D.
+  document.getElementById('input-road-cost').addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    if (!isNaN(val) && val >= 0) {
+      state.roadCost = val;
+      updateDashboard();
+    }
+  });
+
+  // 8. Bidirectional speed <-> optimized modal share controls.
+  // The share-to-speed inversion uses the same optimized logit model as the chart.
+  document.getElementById('input-model-speed').addEventListener('input', (e) => {
+    const speed = parseFloat(e.target.value);
+    if (Number.isFinite(speed) && speed > 0) {
+      state.hoverSpeed = Math.min(300, Math.max(1, speed));
+      updateReadoutOnly();
+    }
+  });
+
+  document.getElementById('input-model-share').addEventListener('input', (e) => {
+    const targetShare = parseFloat(e.target.value);
+    if (!Number.isFinite(targetShare) || targetShare < 0 || targetShare > 100) return;
+
+    const fm = getFrictionMetrics();
+    // Find the speed whose optimized share is closest to the requested percentage.
+    let low = 1, high = 300;
+    const shareAt = speed => calcShare(
+      speed, state.distanceKm, state.alphaBase, state.customDeltaCost,
+      state.customDeltaTime50, state.bcost, state.btime, fm.timeSaved
+    ).share;
+    const lowShare = shareAt(low), highShare = shareAt(high);
+    // If the requested share requires a speed beyond the 1–300 km/h range,
+    // cap the graph at 300 but display N.A. in the speed field (not 300).
+    const outsideSpeedRange = targetShare < Math.min(lowShare, highShare) || targetShare > Math.max(lowShare, highShare);
+    if (outsideSpeedRange) {
+      state.hoverSpeed = 300;
+      updateReadoutOnly();
+      document.getElementById('input-model-speed').value = 'N.A.';
+      return;
+    }
+    if (targetShare <= Math.min(lowShare, highShare)) {
+      state.hoverSpeed = lowShare < highShare ? low : high;
+    } else if (targetShare >= Math.max(lowShare, highShare)) {
+      state.hoverSpeed = lowShare > highShare ? low : high;
+    } else {
+      for (let i = 0; i < 60; i++) {
+        const mid = (low + high) / 2;
+        const midShare = shareAt(mid);
+        // In this model share rises with speed; retain a robust bracket regardless.
+        if ((midShare < targetShare) === (lowShare < highShare)) low = mid;
+        else high = mid;
+      }
+      state.hoverSpeed = (low + high) / 2;
+    }
+    updateReadoutOnly();
+  });
+
+  // 9. Reset to Reference Button
+  document.getElementById('btn-reset').addEventListener('click', () => {
+    state.baseGate = REF.baseGate;
+    state.baseYard = REF.baseYard;
+    state.baseRake = REF.baseRake;
+    state.gateMult = REF.gateMult;
+    state.yardMult = REF.yardMult;
+    state.rakeMult = REF.rakeMult;
+    state.ratePerKm = 33.333333;
+    state.distanceKm = REF.distanceKm;
+    state.cost = REF.cost;
+    state.roadCost = REF.roadCost;
+    state.bcost = REF.bcost;
+    state.btime = REF.btime;
+    state.customDeltaTime50 = REF.refDeltaTimeAt50;
+    state.customDeltaCost = REF.refDeltaCost;
+    state.alphaBase = REF.alphaBase;
+    state.hoverSpeed = 50;
+
+    document.getElementById('input-alpha').value = "-4.00";
+    document.getElementById('input-base-gate').value = "10.0";
+    document.getElementById('input-base-yard').value = "20.0";
+    document.getElementById('input-base-rake').value = "14.0";
+
+    document.getElementById('slider-gate').value = 1.0;
+    document.getElementById('slider-yard').value = 1.0;
+    document.getElementById('slider-rake').value = 1.0;
+
+    document.getElementById('input-rate-km').value = "33.33";
+    document.getElementById('input-dist-km').value = "2100";
+    document.getElementById('slider-cost').value = 70000;
+    document.getElementById('slider-bcost').value = 0.00010;
+    document.getElementById('slider-btime').value = 0.016;
+
+    document.getElementById('val-cost').textContent = '₹70,000';
+    document.getElementById('val-bcost').textContent = '-0.00010';
+    document.getElementById('val-btime').textContent = '-0.016';
+
+    document.getElementById('input-dtime').value = 11.4;
+    document.getElementById('input-road-cost').value = 95000;
+
+    updateDashboard();
+  });
+
+  window.onload = function() {
+    updateDashboard();
+  };
+</script>
+</body>
+</html>
